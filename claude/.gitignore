@@ -1,0 +1,10 @@
+data/
+cache/cache.db
+cache/cache.db-*
+cache/errors/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/

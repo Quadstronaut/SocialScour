@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reddit-research"
+version = "0.1.0"
+description = "Prompt-driven Reddit research with local LLM summarization and a 30-day cache."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx[http2]>=0.27",
+    "pydantic>=2.7",
+    "tenacity>=8.3",
+    "typer>=0.12",
+    "openai>=1.40",
+    "mcp>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-mock>=3.12"]
+
+[project.scripts]
+reddit-research = "reddit_research.cli:app"
+reddit-research-mcp = "reddit_research.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reddit_research*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
