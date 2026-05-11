@@ -1,0 +1,114 @@
+
+===== attempt 1 =====
+aider-test/roman.py
+```python
+def to_roman(n):
+    if not 1 <= n <= 3999:
+        raise ValueError("Input must be between 1 and 3999")
+    
+    val_map = [
+        (1000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I")
+    ]
+    
+    result = []
+    for value, numeral in val_map:
+        count = n // value
+        if count:
+            result.append(numeral * count)
+            n -= value * count
+    return "".join(result)
+
+
+def from_roman(s):
+    if not s:
+        raise ValueError("Invalid Roman numeral")
+    
+    val_map = {
+        "I": 1,
+        "V": 5,
+        "X": 10,
+        "L": 50,
+        "C": 100,
+        "D": 500,
+        "M": 1000
+    }
+    
+    total = 0
+    prev = 0
+    
+    for char in reversed(s):
+        if char not in val_map:
+            raise ValueError("Invalid Roman numeral")
+        value = val_map[char]
+        if value < prev:
+            total -= value
+        else:
+            total += value
+        prev = value
+    
+    if total < 1 or total > 3999:
+        raise ValueError("Invalid Roman numeral")
+    
+    return total
+```
+
+aider-test/test_roman.py
+```python
+from roman import to_roman, from_roman
+
+# Test to_roman function
+assert to_roman(1) == "I"
+assert to_roman(4) == "IV"
+assert to_roman(9) == "IX"
+assert to_roman(40) == "XL"
+assert to_roman(1994) == "MCMXCIV"
+assert to_roman(3999) == "MMMCMXCIX"
+
+# Test from_roman function
+assert from_roman("I") == 1
+assert from_roman("MCMXCIV") == 1994
+
+# Test round-trip conversions
+for n in [1, 4, 9, 40, 49, 99, 400, 944, 1994, 2024, 3999]:
+    assert from_roman(to_roman(n)) == n
+
+# Test out-of-range raises
+try:
+    to_roman(0)
+    assert False, "Should have raised ValueError"
+except ValueError:
+    pass
+
+try:
+    to_roman(4000)
+    assert False, "Should have raised ValueError"
+except ValueError:
+    pass
+
+# Test malformed input raises
+try:
+    from_roman("IIII")
+    assert False, "Should have raised ValueError"
+except ValueError:
+    pass
+
+try:
+    from_roman("ABC")
+    assert False, "Should have raised ValueError"
+except ValueError:
+    pass
+
+print("OK")
+```
