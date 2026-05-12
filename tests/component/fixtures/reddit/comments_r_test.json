@@ -1,0 +1,155 @@
+[
+  {
+    "kind": "Listing",
+    "data": {
+      "after": null,
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "id": "abc1",
+            "subreddit": "test",
+            "title": "How I segmented my home network with VLANs",
+            "author": "vlan_wizard",
+            "url": "https://www.reddit.com/r/test/comments/abc1/how_i_segmented_my_home_network_with_vlans/",
+            "permalink": "/r/test/comments/abc1/how_i_segmented_my_home_network_with_vlans/",
+            "selftext": "I finally got around to setting up VLANs on my home network. Here's what I did and why it matters for security.",
+            "score": 842,
+            "upvote_ratio": 0.97,
+            "num_comments": 134,
+            "created_utc": 1714500000.0,
+            "link_flair_text": "Guide",
+            "is_self": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Listing",
+    "data": {
+      "after": null,
+      "children": [
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm001",
+            "author": "AutoModerator",
+            "body": "Welcome to r/test! Please read our rules before posting. This subreddit is for testing Reddit features and API integrations.",
+            "score": 100,
+            "created_utc": 1714500060.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm002",
+            "author": "neteng_patricia",
+            "body": "Great writeup. The key insight most people miss is that VLANs alone don't protect you — you need firewall rules between them. I run pfSense and have separate VLANs for IoT, trusted devices, and guest WiFi. The IoT VLAN can only reach the internet, not the LAN, which contains any potential compromise.",
+            "score": 50,
+            "created_utc": 1714500120.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm003",
+            "author": "routergeek42",
+            "body": "I did the same thing with Ubiquiti UniFi gear. The dream machine pro makes it pretty easy to set up firewall policies between VLANs. Took me about a weekend to get it right, but now I sleep much better knowing my smart bulbs can't pivot to my NAS.",
+            "score": 30,
+            "created_utc": 1714500240.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm004",
+            "author": "skeptical_sam",
+            "body": "This is security theater for most home users. If your threat model is nation-state actors, VLANs won't save you. For normal people, basic password hygiene and keeping firmware up to date matters far more than network segmentation.",
+            "score": 25,
+            "created_utc": 1714500360.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm005",
+            "author": "homelab_hero",
+            "body": "Which managed switch did you use? I have a mix of Cisco SG350 and Netgear gear and found 802.1Q trunk configuration to be the biggest pain point when setting up inter-VLAN routing.",
+            "score": 15,
+            "created_utc": 1714500480.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm006",
+            "author": "ipcam_fanatic",
+            "body": "Short comment here.",
+            "score": 8,
+            "created_utc": 1714500600.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm007",
+            "author": "dns_nerd",
+            "body": "Don't forget split DNS. If your IoT VLAN can resolve internal hostnames, it can still enumerate your network. Run a dedicated DNS resolver per VLAN with appropriate filtering rules configured in your DNS-over-TLS upstream.",
+            "score": 4,
+            "created_utc": 1714500720.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm008",
+            "author": "just_lurking_here",
+            "body": "Thanks for this!",
+            "score": 3,
+            "created_utc": 1714500840.0,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "cm009",
+            "author": "deep_thread_user",
+            "body": "This is a depth-1 reply to cm002, and should be filtered out since we only want top-level comments. The fetch_comments method must skip any comment where depth != 0.",
+            "score": 22,
+            "created_utc": 1714500900.0,
+            "depth": 1,
+            "parent_id": "t1_cm002"
+          }
+        },
+        {
+          "kind": "more",
+          "data": {
+            "id": "_",
+            "name": "more",
+            "children": ["cm010", "cm011"],
+            "count": 2,
+            "depth": 0,
+            "parent_id": "t3_abc1"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "kind": "Listing",
+  "data": {
+    "after": null,
+    "children": [
+      {
+        "kind": "t5",
+        "data": {
+          "display_name": "homelab",
+          "subscribers": 800000,
+          "subreddit_type": "public",
+          "over18": false
+        }
+      },
+      {
+        "kind": "t5",
+        "data": {
+          "display_name": "netsec",
+          "subscribers": 500000,
+          "subreddit_type": "public",
+          "over18": false
+        }
+      },
+      {
+        "kind": "t5",
+        "data": {
+          "display_name": "PrivateSub",
+          "subscribers": 100,
+          "subreddit_type": "private",
+          "over18": false
+        }
+      }
+    ]
+  }
+}

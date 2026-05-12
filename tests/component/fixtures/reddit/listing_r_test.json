@@ -1,0 +1,98 @@
+{
+  "kind": "Listing",
+  "data": {
+    "after": null,
+    "children": [
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc1",
+          "subreddit": "test",
+          "title": "How I segmented my home network with VLANs",
+          "author": "vlan_wizard",
+          "url": "https://www.reddit.com/r/test/comments/abc1/how_i_segmented_my_home_network_with_vlans/",
+          "permalink": "/r/test/comments/abc1/how_i_segmented_my_home_network_with_vlans/",
+          "selftext": "I finally got around to setting up VLANs on my home network. Here's what I did and why it matters for security.",
+          "score": 842,
+          "upvote_ratio": 0.97,
+          "num_comments": 134,
+          "created_utc": 1714500000.0,
+          "link_flair_text": "Guide",
+          "is_self": true
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc2",
+          "subreddit": "test",
+          "title": "Is consumer-grade WiFi 6 secure enough for home use?",
+          "author": "rf_paranoid",
+          "url": "https://arstechnica.com/gadgets/wifi6-security",
+          "permalink": "/r/test/comments/abc2/is_consumer_grade_wifi6_secure_enough/",
+          "selftext": "",
+          "score": 512,
+          "upvote_ratio": 0.91,
+          "num_comments": 88,
+          "created_utc": 1714420000.0,
+          "link_flair_text": "Discussion",
+          "is_self": false
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc3",
+          "subreddit": "test",
+          "title": "Don't bother with WPA3 — here's why most routers implement it badly",
+          "author": "crypto_karen",
+          "url": "https://www.reddit.com/r/test/comments/abc3/dont_bother_with_wpa3/",
+          "permalink": "/r/test/comments/abc3/dont_bother_with_wpa3/",
+          "selftext": "WPA3 sounds great on paper but the transition mode leaves glaring holes. Most consumer APs are still vulnerable.",
+          "score": 389,
+          "upvote_ratio": 0.88,
+          "num_comments": 67,
+          "created_utc": 1714350000.0,
+          "link_flair_text": "Security",
+          "is_self": true
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc4",
+          "subreddit": "test",
+          "title": "What router should I buy for a home lab in 2024?",
+          "author": "rack_renter",
+          "url": "https://www.reddit.com/r/test/comments/abc4/what_router_should_i_buy/",
+          "permalink": "/r/test/comments/abc4/what_router_should_i_buy/",
+          "selftext": "Budget is around $200. I want something that supports VLANs, has a good firewall, and won't spy on me.",
+          "score": 270,
+          "upvote_ratio": 0.94,
+          "num_comments": 102,
+          "created_utc": 1714280000.0,
+          "link_flair_text": null,
+          "is_self": true
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc5",
+          "subreddit": "test",
+          "title": "Cats are great",
+          "author": "fluffycat99",
+          "url": "https://imgur.com/fluffycat",
+          "permalink": "/r/test/comments/abc5/cats_are_great/",
+          "selftext": "",
+          "score": 15,
+          "upvote_ratio": 0.72,
+          "num_comments": 3,
+          "created_utc": 1714200000.0,
+          "link_flair_text": "OC",
+          "is_self": false
+        }
+      }
+    ]
+  }
+}

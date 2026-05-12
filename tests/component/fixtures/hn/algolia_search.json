@@ -1,0 +1,24 @@
+{
+  "hits": [
+    {
+      "objectID": "1",
+      "title": "Show HN: vibecoding tool",
+      "url": "https://example.com/1",
+      "author": "alice",
+      "points": 42,
+      "num_comments": 7,
+      "created_at_i": 1700000000,
+      "_tags": ["story"]
+    },
+    {
+      "objectID": "c1",
+      "story_id": "1",
+      "comment_text": "Great tool!",
+      "author": "bob",
+      "points": 5,
+      "created_at_i": 1700000100,
+      "_tags": ["comment"]
+    }
+  ],
+  "nbHits": 2
+}

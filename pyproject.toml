@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "social-scraper"
+version = "0.2.0"
+description = "Multi-source social aggregator (Reddit, Google Trends, HN, IndieHackers) with Ollama + Claude Code drivers."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx[http2]>=0.27",
+    "pydantic>=2.7",
+    "tenacity>=8.3",
+    "typer>=0.12",
+    "beautifulsoup4>=4.12",
+    "trendspy>=0.1.6",
+    "smolagents>=1.0",
+    "mcp>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "pytest-repeat>=0.9",
+    "vcrpy>=6.0",
+]
+
+[project.scripts]
+scrape = "social_scraper.cli:app"
+social-scraper-mcp = "social_scraper.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["social_scraper*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "component: isolated unit tests (no network)",
+    "workflow: full-pipeline tests with fakes (no network)",
+    "e2e: real services — requires --e2e flag",
+]
+addopts = "-ra --strict-markers -m 'not e2e'"
