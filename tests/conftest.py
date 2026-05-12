@@ -10,6 +10,11 @@ def pytest_addoption(parser):
     parser.addoption("--e2e", action="store_true", help="run e2e tests")
 
 
+def pytest_configure(config):
+    if config.getoption("--e2e"):
+        config.option.markexpr = ""
+
+
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--e2e"):
         return
