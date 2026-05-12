@@ -1,5 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Scraper outputs (per spec §7 — never sync)
+data/
+cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Aider
 .aider*
-**/data/
-**/.venv/
-**/__pycache__/
-**/*.egg-info/

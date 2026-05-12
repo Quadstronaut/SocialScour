@@ -1,0 +1,10 @@
+{
+  "kind": "t5",
+  "data": {
+    "display_name": "test",
+    "subscribers": 12345,
+    "subreddit_type": "public",
+    "over18": false,
+    "public_description": "for testing"
+  }
+}
