@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "topic_areas": {
+    "stock_market_discussion": {
+      "subs": {
+        "stocks": {
+          "score": 1,
+          "last_useful_utc": "2026-05-11T22:31:37Z",
+          "promoted": false
+        },
+        "investing": {
+          "score": 1,
+          "last_useful_utc": "2026-05-11T22:31:37Z",
+          "promoted": false
+        },
+        "wallstreetbets": {
+          "score": 1,
+          "last_useful_utc": "2026-05-11T22:58:13Z",
+          "promoted": false
+        }
+      }
+    },
+    "programming_tools": {
+      "subs": {
+        "devtools": {
+          "score": -1,
+          "last_useful_utc": null,
+          "promoted": false
+        }
+      }
+    }
+  }
+}
