@@ -27,7 +27,7 @@ dev = [
 ]
 
 [project.scripts]
-scrape = "social_scraper.cli:app"
+scour = "social_scraper.cli:app"
 social-scraper-mcp = "social_scraper.mcp_server:main"
 
 [tool.setuptools.packages.find]

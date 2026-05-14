@@ -21,20 +21,21 @@ class _FakeLLM:
             return model_cls(subreddits=["test"])
         if name == "_TopicArea":
             return model_cls(area="test_area", new=True)
-        if name == "_RankedList":
-            item_cls = model_cls.model_fields["ranked"].annotation.__args__[0]
-            return model_cls(ranked=[item_cls(post_id="r0", relevance=0.7)])
         if name == "PostSummary":
             from social_scraper.core.schema import PostSummary
             return PostSummary(
                 post_id="r0", source=SourceKind.reddit, summary="s",
                 themes=["t"], relevance_to_prompt=0.7,
             )
+        if name == "TopicConfidence":
+            return model_cls(addressed=True, confidence=0.8, rationale="fake")
         raise AssertionError(name)
     def chat_stream(self, system, user):
         yield "Narrative."
     def ping(self):
         return True
+    def embed(self, texts, model=None):
+        return [[1.0, 0.0, 0.0] for _ in texts]
 
 
 class _FakeReddit:
