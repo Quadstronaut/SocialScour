@@ -12,11 +12,29 @@ from social_scraper.core.pipeline.discover_subs import discover_subreddits
 from social_scraper.core.pipeline.narrate import narrate
 from social_scraper.core.pipeline.rank import rank_posts
 from social_scraper.core.pipeline.summarize import summarize_post
-from social_scraper.core.schema import PostSummary, RawPost, RunMeta, SourceKind
+from social_scraper.core.schema import (
+    PostSummary,
+    RawPost,
+    RunMeta,
+    SourceKind,
+    SourceStats,
+    TopicConfidence,
+)
 from social_scraper.core.store.cache import LLMCache
 from social_scraper.core.store.reputation import Reputation
 from social_scraper.core.store.run import RunWriter
 from social_scraper.core.store.timeline import TimelineWriter
+
+
+class _OllamaEmbedAdapter:
+    """Adapts an OllamaClient to the embedder contract used by rank_posts."""
+
+    def __init__(self, llm, model: str) -> None:
+        self._llm = llm
+        self._model = model
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return self._llm.embed(texts, model=self._model)
 
 
 @dataclass
@@ -36,6 +54,59 @@ class AskConfig:
     comments_per_post: int = 10
     min_comment_score: int = 5
     max_subs: int = 8
+    # When set, bypass LLM-driven subreddit discovery and use these subs verbatim.
+    subreddits: Optional[list[str]] = None
+    # Embeddings model used for semantic relevance ranking.
+    embed_model: str = "bge-m3:latest"
+    # Cosine similarity below this drops posts from summarization.
+    # Empirically tuned for bge-m3 — see TODO-tomorrow.md validation notes:
+    # genuine on-topic posts score 0.45–0.53, clear noise scores 0.30.
+    drop_threshold: float = 0.45
+    # Topic-relevance gate: skip summarization when fewer than this many posts
+    # cleared the drop threshold.
+    min_kept_for_summary: int = 5
+    min_keep_ratio: float = 0.10
+
+
+_TOPIC_CHECK_SYSTEM = (
+    "You verify whether a research digest actually answers a user's question. "
+    "Reply ONLY with JSON: "
+    "{addressed: bool, confidence: 0.0-1.0, rationale: string}. "
+    "'addressed' is true only if the summary directly discusses the user's topic. "
+    "If the summary is about a different subject, set addressed=false."
+)
+
+
+def _topic_confidence_check(llm, topic: str, narrative: str) -> Optional[TopicConfidence]:
+    """Ask the LLM whether the narrative addresses the topic. Best-effort: returns None on error."""
+    snippet = narrative[:4000]
+    user = f"User topic: {topic}\n\nDigest:\n{snippet}"
+    try:
+        return llm.json_call(_TOPIC_CHECK_SYSTEM, user, TopicConfidence)
+    except OllamaError:
+        return None
+    except Exception:
+        return None
+
+
+def _prepend_confidence_header(narrative: str, tc: Optional[TopicConfidence]) -> str:
+    if tc is None:
+        return narrative
+    if tc.addressed and tc.confidence >= 0.6:
+        header = (
+            f"> topic-confidence: {tc.confidence:.2f} — summary addresses query directly\n\n"
+        )
+    else:
+        header = (
+            f"> WARN topic-confidence: {tc.confidence:.2f} — "
+            f"summary may not address the original query\n\n"
+        )
+    # Insert after the leading H1 if present, otherwise prepend.
+    if narrative.startswith("# "):
+        first_nl = narrative.find("\n")
+        if first_nl != -1:
+            return narrative[: first_nl + 1] + "\n" + header + narrative[first_nl + 1 :].lstrip("\n")
+    return header + narrative
 
 
 def _window_to_time_filter(window_days: int) -> str:
@@ -79,9 +150,13 @@ def run_ask(
     # --- Reddit branch
     if SourceKind.reddit in cfg.sources:
         try:
-            subs, area_slug = discover_subreddits(
-                llm, reddit, cfg.topic, rep_data, max_subs=cfg.max_subs,
-            )
+            if cfg.subreddits:
+                subs = [s.strip().lstrip("r/") for s in cfg.subreddits if s.strip()]
+                writer.add_warning(f"discovery_skipped:pinned_subs={','.join(subs)}")
+            else:
+                subs, _area_slug = discover_subreddits(
+                    llm, reddit, cfg.topic, rep_data, max_subs=cfg.max_subs,
+                )
             tf = _window_to_time_filter(cfg.window_days)
             for sub in subs:
                 try:
@@ -140,18 +215,78 @@ def run_ask(
     for source in {p.source for p in raw_posts}:
         writer.write_raw(source, [p for p in raw_posts if p.source == source])
 
-    # Rank
-    ranked, used_rank_fallback = rank_posts(llm, cfg.topic, raw_posts, top_k=cfg.top_k)
-    if used_rank_fallback:
-        writer.add_warning("rank_fallback_used")
+    # Rank — embeddings cosine sim against the topic (bge-m3 by default).
+    embedder = _OllamaEmbedAdapter(llm, cfg.embed_model)
+    ranking = rank_posts(
+        embedder,
+        cfg.topic,
+        raw_posts,
+        top_k=cfg.top_k,
+        drop_threshold=cfg.drop_threshold,
+    )
+    if ranking.used_fallback:
+        writer.add_warning("rank_fallback_used:embedder_failed")
+
+    # Persist full audit trail of ranking decisions (including dropped items).
     writer.write_ranked([
-        {"post_id": p.id, "source": p.source.value, "relevance": rel}
-        for p, rel in ranked
+        {
+            "post_id": p.id,
+            "source": p.source.value,
+            "relevance": rel,
+            "reason": reason,
+            "kept": (p.id in {k.id for k, _, _ in ranking.kept}),
+        }
+        for p, rel, reason in ranking.ranked
     ])
 
-    # Fetch deep + summarize per top item
+    # Per-source stats: discovered / ranked / kept / dropped.
+    kept_ids_by_source: dict[SourceKind, set[str]] = {}
+    for p, _, _ in ranking.kept:
+        kept_ids_by_source.setdefault(p.source, set()).add(p.id)
+    sources_seen = {p.source for p in raw_posts}
+    for source in sources_seen:
+        n_disc = sum(1 for p in raw_posts if p.source == source)
+        kept_ids = kept_ids_by_source.get(source, set())
+        n_kept = len(kept_ids)
+        writer.set_source_stats(source, SourceStats(
+            discovered=n_disc,
+            ranked=n_disc,  # we score every discovered post
+            kept=n_kept,
+            dropped=n_disc - n_kept,
+        ))
+
+    # Topic-relevance gate — skip summarization when too little on-topic content survived.
+    n_discovered = len(raw_posts)
+    n_kept = len(ranking.kept)
+    keep_ratio = (n_kept / n_discovered) if n_discovered else 0.0
+    if (
+        not ranking.used_fallback
+        and n_discovered > 0
+        and (n_kept < cfg.min_kept_for_summary or keep_ratio < cfg.min_keep_ratio)
+    ):
+        writer.mark_topic_mismatch()
+        writer.add_warning(
+            f"topic_mismatch: only {n_kept} of {n_discovered} posts addressed '{cfg.topic}'"
+        )
+        writer.write_summary_md(
+            f"# {cfg.topic}\n\n"
+            f"> topic_mismatch — only {n_kept} of {n_discovered} posts "
+            f"cleared the relevance threshold ({cfg.drop_threshold:.2f}). "
+            f"Skipping summarization to avoid a confidently-wrong answer.\n\n"
+            f"Try a narrower topic phrase, a different `--subreddits` set, or a wider `--window-days`.\n"
+        )
+        writer.finalize(finished=datetime.now(timezone.utc))
+        cache.close()
+        return {
+            "run_dir": writer.run_dir,
+            "summary_path": writer.run_dir / "summary" / "summary.md",
+            "warnings": list(writer.meta.warnings),
+            "topic_mismatch": True,
+        }
+
+    # Fetch deep + summarize per kept item
     summaries: list[PostSummary] = []
-    for post, relevance in ranked:
+    for post, relevance, _reason in ranking.kept:
         full_post = post
         if post.source == SourceKind.reddit and post.subreddit:
             try:
@@ -185,10 +320,16 @@ def run_ask(
     # Narrate (streamed to stdout AND captured for the file)
     buf = io.StringIO()
     narrative = narrate(llm, cfg.topic, summaries, out_stream=buf)
-    writer.write_summary_md(narrative)
+
+    # Post-summary topic-confidence check — quick LLM second-pass.
+    tc = _topic_confidence_check(llm, cfg.topic, narrative)
+    if tc is not None:
+        writer.set_topic_confidence(tc)
+    final_md = _prepend_confidence_header(narrative, tc)
+    writer.write_summary_md(final_md)
 
     # Timeline append
-    first_para = narrative.split("\n\n")[1] if "\n\n" in narrative else narrative[:300]
+    first_para = final_md.split("\n\n")[1] if "\n\n" in final_md else final_md[:300]
     TimelineWriter(cfg.data_root, writer.slug).append(
         when=now, run_dir=writer.run_dir, verdict=first_para,
     )
@@ -202,4 +343,5 @@ def run_ask(
         "summary_path": writer.run_dir / "summary" / "summary.md",
         "narrative_preview": first_para,
         "warnings": list(writer.meta.warnings),
+        "topic_confidence": tc.model_dump() if tc else None,
     }

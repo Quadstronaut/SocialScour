@@ -9,7 +9,7 @@ from typing import Iterable
 
 from pydantic import BaseModel
 
-from social_scraper.core.schema import RawPost, RunMeta, SourceKind
+from social_scraper.core.schema import RawPost, RunMeta, SourceKind, SourceStats, TopicConfidence
 
 
 _SLUG_MAX = 60
@@ -90,6 +90,18 @@ class RunWriter:
         if source not in self.meta.blocked_sources:
             self.meta.blocked_sources.append(source)
             self._write_meta()
+
+    def set_source_stats(self, source: SourceKind, stats: SourceStats) -> None:
+        self.meta.per_source_stats[source.value] = stats
+        self._write_meta()
+
+    def set_topic_confidence(self, tc: TopicConfidence) -> None:
+        self.meta.topic_confidence = tc
+        self._write_meta()
+
+    def mark_topic_mismatch(self) -> None:
+        self.meta.topic_mismatch = True
+        self._write_meta()
 
     def finalize(self, finished: datetime) -> None:
         self.meta.finished_utc = _iso_z(finished)

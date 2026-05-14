@@ -91,3 +91,45 @@ def test_chat_returns_plain_text():
         http_client=httpx.Client(transport=_mock_transport(["hello world"])),
     )
     assert client.chat("sys", "user") == "hello world"
+
+
+def test_embed_returns_vectors_and_honors_model_override():
+    captured: dict = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured["url"] = str(req.url)
+        captured["body"] = json.loads(req.content.decode("utf-8"))
+        return httpx.Response(200, json={"embeddings": [[0.1, 0.2], [0.3, 0.4]]})
+
+    client = OllamaClient(
+        model="default-model",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    vectors = client.embed(["hello", "world"], model="bge-m3:latest")
+    assert vectors == [[0.1, 0.2], [0.3, 0.4]]
+    assert captured["url"].endswith("/api/embed")
+    assert captured["body"]["model"] == "bge-m3:latest"
+    assert captured["body"]["input"] == ["hello", "world"]
+
+
+def test_embed_raises_ollama_error_on_http_failure():
+    def handler(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("nope", request=req)
+
+    client = OllamaClient(
+        model="x",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(OllamaError):
+        client.embed(["text"])
+
+
+def test_embed_empty_input_returns_empty_list():
+    def handler(req: httpx.Request) -> httpx.Response:
+        raise AssertionError("HTTP should not be called for empty input")
+
+    client = OllamaClient(
+        model="x",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    assert client.embed([]) == []

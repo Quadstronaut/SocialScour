@@ -19,6 +19,14 @@ def test_cli_help():
     assert "discover" in result.stdout
 
 
+def test_cli_ask_help_documents_subreddits_flag():
+    from social_scraper.cli import app
+    runner = CliRunner()
+    result = runner.invoke(app, ["ask", "--help"])
+    assert result.exit_code == 0
+    assert "--subreddits" in result.stdout
+
+
 def test_cli_timeline_missing_topic(tmp_path):
     from social_scraper.cli import app
     runner = CliRunner()
