@@ -79,6 +79,19 @@ class Digest(BaseModel):
     per_source_sentiment: list[SourceSentiment] = Field(default_factory=list)
 
 
+class SourceStats(BaseModel):
+    discovered: int = 0  # raw posts fetched
+    ranked: int = 0      # posts scored by the relevance ranker
+    kept: int = 0        # posts that passed drop_threshold AND made top_k
+    dropped: int = 0     # posts below threshold or below top_k cutoff
+
+
+class TopicConfidence(BaseModel):
+    addressed: bool
+    confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = ""
+
+
 class RunMeta(BaseModel):
     topic: str
     slug: str
@@ -90,3 +103,6 @@ class RunMeta(BaseModel):
     finished_utc: Optional[str] = None
     warnings: list[str] = Field(default_factory=list)
     blocked_sources: list[SourceKind] = Field(default_factory=list)
+    per_source_stats: dict[str, SourceStats] = Field(default_factory=dict)
+    topic_confidence: Optional[TopicConfidence] = None
+    topic_mismatch: bool = False

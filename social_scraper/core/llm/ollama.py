@@ -20,6 +20,16 @@ def _default_base_url() -> str:
     return os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
 
+def _default_timeout() -> float:
+    raw = os.environ.get("OLLAMA_TIMEOUT")
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return 1800.0
+
+
 # Pull a JSON object from arbitrary text (greedy match on outermost braces).
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 
@@ -35,11 +45,12 @@ class OllamaClient:
         model: str,
         base_url: Optional[str] = None,
         http_client: Optional[httpx.Client] = None,
-        timeout: float = 120.0,
+        timeout: Optional[float] = None,
     ) -> None:
         self.model = model
         self.base_url = base_url or _default_base_url()
-        self._http = http_client or httpx.Client(timeout=timeout)
+        effective_timeout = timeout if timeout is not None else _default_timeout()
+        self._http = http_client or httpx.Client(timeout=effective_timeout)
         self._owns_http = http_client is None
 
     def close(self) -> None:
@@ -119,20 +130,41 @@ class OllamaClient:
             f"Last reply: {second[:200]}"
         )
 
+    def embed(self, texts: list[str], model: Optional[str] = None) -> list[list[float]]:
+        """Return one vector per input text. Uses `model` if given, else self.model."""
+        if not texts:
+            return []
+        try:
+            resp = self._http.post(
+                f"{self.base_url}/api/embed",
+                json={"model": model or self.model, "input": texts},
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise OllamaError(f"Ollama embed request failed: {exc!r}") from exc
+        payload = resp.json()
+        vectors = payload.get("embeddings")
+        if not isinstance(vectors, list):
+            raise OllamaError(f"Ollama embed returned unexpected payload: {payload!r}")
+        return vectors
+
     def _json_call_once(self, system: str, user: str) -> str:
-        resp = self._http.post(
-            f"{self.base_url}/api/chat",
-            json={
-                "model": self.model,
-                "stream": False,
-                "format": "json",
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-            },
-        )
-        resp.raise_for_status()
+        try:
+            resp = self._http.post(
+                f"{self.base_url}/api/chat",
+                json={
+                    "model": self.model,
+                    "stream": False,
+                    "format": "json",
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                },
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise OllamaError(f"Ollama request failed: {exc!r}") from exc
         return resp.json()["message"]["content"]
 
 

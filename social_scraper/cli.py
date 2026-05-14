@@ -42,6 +42,12 @@ def ask(
     window_days: int = typer.Option(30, "--window-days"),
     sources: Optional[str] = typer.Option(None, "--sources",
                                           help="comma-separated: reddit,trends,hn,ih"),
+    subreddits: Optional[str] = typer.Option(
+        None, "--subreddits",
+        help=("comma-separated, e.g. sysadmin,selfhosted,linuxadmin. "
+              "Use this when you already know which communities discuss the topic "
+              "— bypasses LLM-driven discovery."),
+    ),
     model: str = typer.Option("qwen3-coder:30b", "--model"),
     summarizer: str = typer.Option("ollama", "--summarizer", help="ollama|claude"),
     data_root: Path = typer.Option(_DEFAULT_DATA_ROOT, "--out"),
@@ -64,10 +70,15 @@ def ask(
     ih = IndieHackersClient()
     trends = GoogleTrendsClient()
 
+    pinned_subs = None
+    if subreddits:
+        pinned_subs = [s.strip() for s in subreddits.split(",") if s.strip()]
+
     cfg = AskConfig(
         topic=topic,
         window_days=window_days,
         sources=_parse_sources(sources),
+        subreddits=pinned_subs,
         model=model,
         summarizer=summarizer,
         data_root=data_root,
