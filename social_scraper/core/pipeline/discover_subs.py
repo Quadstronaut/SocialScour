@@ -16,9 +16,18 @@ class _TopicArea(BaseModel):
     new: bool
 
 
+def _strip_r_prefix(name: str) -> str:
+    s = name.strip()
+    if s.startswith("/r/"):
+        return s[3:]
+    if s.startswith("r/"):
+        return s[2:]
+    return s
+
+
 def propose_subreddits(llm, prompt: str) -> list[str]:
     result = llm.json_call(DISCOVER_SYSTEM, prompt, _Proposal)
-    return [s.strip().lstrip("r/") for s in result.subreddits]
+    return [_strip_r_prefix(s) for s in result.subreddits]
 
 
 def verify_subreddits(reddit: RedditClient, names: list[str]) -> list[dict]:

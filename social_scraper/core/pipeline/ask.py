@@ -109,6 +109,20 @@ def _prepend_confidence_header(narrative: str, tc: Optional[TopicConfidence]) ->
     return header + narrative
 
 
+def _normalize_sub(name: str) -> str:
+    """Strip a leading `r/` or `/r/` prefix without eating other leading 'r's.
+
+    `str.lstrip("r/")` strips any leading char in the set {'r', '/'}, which
+    silently mangles names like `rollerskating` -> `ollerskating`.
+    """
+    s = name.strip()
+    if s.startswith("/r/"):
+        s = s[3:]
+    elif s.startswith("r/"):
+        s = s[2:]
+    return s
+
+
 def _window_to_time_filter(window_days: int) -> str:
     if window_days <= 1:
         return "day"
@@ -151,7 +165,7 @@ def run_ask(
     if SourceKind.reddit in cfg.sources:
         try:
             if cfg.subreddits:
-                subs = [s.strip().lstrip("r/") for s in cfg.subreddits if s.strip()]
+                subs = [_normalize_sub(s) for s in cfg.subreddits if s.strip()]
                 writer.add_warning(f"discovery_skipped:pinned_subs={','.join(subs)}")
             else:
                 subs, _area_slug = discover_subreddits(
