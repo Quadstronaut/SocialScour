@@ -277,3 +277,32 @@ def test_ask_with_pinned_subreddits_skips_discovery(tmp_path):
     assert reddit.search_calls == []
     # But the pinned subs are fetched verbatim:
     assert reddit.listing_calls == ["sysadmin", "selfhosted"]
+
+
+def test_ask_pinned_subreddits_preserve_leading_r(tmp_path):
+    """Regression: lstrip('r/') would mangle 'rollerskating' -> 'ollerskating'."""
+    reddit = _TrackingReddit()
+    cfg = AskConfig(
+        topic="anything",
+        sources=[SourceKind.reddit],
+        subreddits=["rollerskating", "r/quadskating", "/r/jamskating", "AskMen"],
+        model="fake",
+        summarizer="ollama",
+        data_root=tmp_path / "data",
+        cache_path=tmp_path / "cache" / "c.sqlite",
+        reputation_path=tmp_path / "cache" / "rep.json",
+        drop_threshold=0.0,
+        min_kept_for_summary=1,
+    )
+    run_ask(
+        cfg,
+        llm=_FakeLLM(),
+        reddit=reddit,
+        hn=_FakeHN(),
+        indiehackers=_FakeIH(),
+        google_trends=_FakeTrends(),
+        now=datetime(2026, 5, 11, 12, 0, 0, tzinfo=timezone.utc),
+    )
+    # Raw names preserved, `r/` and `/r/` prefixes stripped, but the leading
+    # 'r' of `rollerskating` must NOT be eaten.
+    assert reddit.listing_calls == ["rollerskating", "quadskating", "jamskating", "AskMen"]
