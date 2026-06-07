@@ -58,7 +58,7 @@ scour ask "Linux server hardening audit tools" \
 # Narrow to specific sources
 scour ask "open source billing tools" --sources reddit,hn --window-days 14
 
-# Use Claude Code CLI as the summarizer instead of Ollama
+# --summarizer claude is accepted but has no effect; Ollama is always used
 scour ask "container orchestration trends" --summarizer claude
 
 # Discover what's trending without a topic
@@ -86,7 +86,7 @@ Fetch + rank + summarize posts about `TOPIC`. Writes `data/runs/<slug>_<timestam
 | `--sources LIST` | all | Comma-separated: `reddit,hn,indiehackers,trends` (alias `ih`, `google_trends`) |
 | `--subreddits LIST` | (auto-discover) | Comma-separated subreddit names; bypasses LLM-driven discovery |
 | `--model MODEL` | `qwen3-coder:30b` | Ollama model for summarization |
-| `--summarizer NAME` | `ollama` | `ollama` or `claude` (requires `claude` CLI in PATH) |
+| `--summarizer NAME` | `ollama` | Accepted and stored in `meta.json`; has no effect on pipeline execution |
 | `--out PATH` | `data` | Root folder for run output |
 
 **Important:** Run `scour` from the repo root, or pass `--out` with an
@@ -184,7 +184,7 @@ summary/
 Per-topic history: `data/topics/<slug>/timeline.md`
 
 The LLM call cache lives at `cache/ollama_calls.sqlite` (30-day TTL, keyed by
-post ID + model).
+post ID + model name + role).
 
 ---
 
@@ -206,15 +206,11 @@ endpoint. If Reddit starts returning 403s, try setting a descriptive
 ## Known Issues & Gaps
 
 - **Relative path defaults** — `data/` and `cache/` resolve relative to CWD. Run from the repo root or use `--out` with an absolute path.
-- **`--summarizer claude` is partially wired** — `ClaudeClient` exists but the pipeline's `summarize_post` step does not branch on `--summarizer`. The Ollama path is always used for per-post summaries; the flag only affects the final narrative when the summarizer wiring is complete.
+- **`--summarizer claude` has no effect** — the flag is accepted and stored in `meta.json` but nothing in the pipeline branches on it. Ollama is always used for all pipeline steps.
 - **LLM-driven subreddit discovery** selects general communities for niche topics. Use `--subreddits` to pin communities when you know them.
 - **`scour discover` uses a simple pick-first driver**, not the full `smolagents.CodeAgent` loop described in the design spec. Functional for most use cases.
 - **MCP `ask` tool missing `subreddits` param** — pin subreddits via the CLI for now.
-- No `--version`, `--dry-run`, `--explain`, or `scour doctor` subcommand yet (tracked in `COMPLETION_ROADMAP.md`).
-
-See [`COMPLETION_ROADMAP.md`](COMPLETION_ROADMAP.md) and
-[`execution-observations.md`](execution-observations.md) for the full gap
-analysis and fix roadmap.
+- No `--version`, `--dry-run`, `--explain`, or `scour doctor` subcommand yet.
 
 ---
 
