@@ -1,1 +1,345 @@
-<div align="center"><br/><br/># 🔍 SocialScour<br/><br/>**Multi-source social aggregator for rapid topic research.**  <br/>Given a topic, pull Reddit + Hacker News + IndieHackers + Google Trends into a single ranked Markdown digest — locally, privately, free.<br/><br/>[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/)<br/>[![Ollama](https://img.shields.io/badge/Ollama-local%20LLM-black?logo=ollama&logoColor=white&style=flat-square)](https://ollama.com)<br/>[![Reddit](https://img.shields.io/badge/Reddit-public%20JSON%20API-FF4500?logo=reddit&logoColor=white&style=flat-square)](https://www.reddit.com)<br/>[![Hacker News](https://img.shields.io/badge/Hacker%20News-Algolia%20API-FF6600?logo=ycombinator&logoColor=white&style=flat-square)](https://hn.algolia.com/api)<br/>[![Google Trends](https://img.shields.io/badge/Google%20Trends-trendspy%2Fpytrends-4285F4?logo=google&logoColor=white&style=flat-square)](https://pypi.org/project/trendspy/)<br/><br/>[![Last Commit](https://img.shields.io/github/last-commit/Quadstronaut/SocialScour?style=flat-square)](https://github.com/Quadstronaut/SocialScour/commits/master)<br/>[![Repo Size](https://img.shields.io/github/repo-size/Quadstronaut/SocialScour?style=flat-square)](https://github.com/Quadstronaut/SocialScour)<br/>[![Top Language](https://img.shields.io/github/languages/top/Quadstronaut/SocialScour?style=flat-square)](https://github.com/Quadstronaut/SocialScour)<br/><br/>---<br/><br/>[![Overview](https://img.shields.io/badge/Overview-0077B5?style=for-the-badge)](#overview)<br/>[![Install](https://img.shields.io/badge/Install-28a745?style=for-the-badge)](#install)<br/>[![Quick Start](https://img.shields.io/badge/Quick%20Start-17a2b8?style=for-the-badge)](#quick-start)<br/>[![CLI Reference](https://img.shields.io/badge/CLI%20Reference-6f42c1?style=for-the-badge)](#cli-reference)<br/>[![MCP Setup](https://img.shields.io/badge/MCP%20Setup-fd7e14?style=for-the-badge)](#mcp-setup)<br/>[![Config](https://img.shields.io/badge/Config-dc3545?style=for-the-badge)](#configuration)<br/>[![Output](https://img.shields.io/badge/Output-20c997?style=for-the-badge)](#output-structure)<br/>[![Sources](https://img.shields.io/badge/Sources-6610f2?style=for-the-badge)](#sources)<br/><br/></div><br/><br/>---<br/><br/><a id="overview"></a><br/>## 🗺️ Overview<br/><br/>SocialScour answers the question: *"Is this a real problem people care about?"*  <br/>It fetches, ranks, and summarises posts across four social platforms using a local Ollama LLM — no cloud API keys, no data leaving the box. The output artifact is a plain `.md` file ready for decision-support.<br/><br/>### At a Glance<br/><br/>| Dimension | Detail |<br/>|---|---|<br/>| **Data sources** | Reddit, Hacker News, IndieHackers, Google Trends |<br/>| **LLM backend** | Ollama (always) — `qwen3-coder:30b` for reasoning, `bge-m3` for embeddings |<br/>| **Entry points** | `scour` CLI · `social-scraper-mcp` MCP server |<br/>| **Auth required** | None (public APIs and scrapers only) |<br/>| **Output** | Ranked Markdown digest + full audit trail (`ranked.jsonl`, `meta.json`) |<br/>| **Cache** | SQLite — 30-day TTL, keyed by post ID + model + role |<br/>| **Privacy** | All data on-box |<br/><br/>### Entry Points<br/><br/>| Entry point | Driver | Command |<br/>|---|---|---|<br/>| `scour` CLI | Ollama (local, free) | `scour ask "your topic"` |<br/>| `social-scraper-mcp` | Ollama (MCP tools) | See [MCP Setup](#mcp-setup) |<br/><br/>---<br/><br/><a id="data-flow"></a><br/>## 🔄 Data Flow<br/><br/>```mermaid<br/>flowchart TD<br/>    topic["🏷️ Topic / No Topic"]<br/><br/>    subgraph Fetch["Fetch Layer"]<br/>        R["Reddit\n(public .json API)"]<br/>        HN["Hacker News\n(Algolia API)"]<br/>        IH["IndieHackers\n(HTML scraper)"]<br/>        GT["Google Trends\n(trendspy / pytrends)"]<br/>    end<br/><br/>    subgraph Rank["Rank Layer"]<br/>        EMB["bge-m3\nEmbeddings"]<br/>        SCORE["Relevance Scorer\n(ranked.jsonl)"]<br/>    end<br/><br/>    subgraph Summarise["Summarise Layer"]<br/>        LLM["qwen3-coder:30b\n(Ollama)"]<br/>        MD["summary.md"]<br/>    end<br/><br/>    subgraph Drivers["Entry Points"]<br/>        CLI["scour CLI"]<br/>        MCP["social-scraper-mcp\n(Claude Code / MCP host)"]<br/>    end<br/><br/>    topic --> CLI<br/>    topic --> MCP<br/>    CLI --> Fetch<br/>    MCP --> Fetch<br/><br/>    R & HN & IH & GT --> SCORE<br/>    EMB --> SCORE<br/>    SCORE --> LLM<br/>    LLM --> MD<br/>```<br/><br/>---<br/><br/><a id="requirements"></a><br/>## ⚙️ Requirements<br/><br/>- **Python** ≥ 3.11<br/>- **[Ollama](https://ollama.com)** running locally (`ollama serve`)<br/>- Models pulled:<br/><br/>```bash<br/>ollama pull qwen3-coder:30b   # reasoning / summarization<br/>ollama pull bge-m3:latest     # embeddings (relevance ranking)<br/>```<br/><br/>- `trendspy` or `pytrends` for Google Trends (installed automatically)<br/><br/>---<br/><br/><a id="install"></a><br/>## 📦 Install<br/><br/>```bash<br/>git clone https://github.com/Quadstronaut/SocialScour.git<br/>cd SocialScour<br/>pip install -e .<br/>```<br/><br/>Confirm the install:<br/><br/>```bash<br/>scour --help<br/>```<br/><br/>---<br/><br/><a id="quick-start"></a><br/>## 🚀 Quick Start<br/><br/>```bash<br/># Research a topic across all four sources (30-day window)<br/>scour ask "local LLM coding assistants"<br/><br/># Pin specific subreddits when you know the community (bypasses LLM discovery)<br/>scour ask "Linux server hardening audit tools" \<br/>  --subreddits sysadmin,selfhosted,linuxadmin,devops,cybersecurity \<br/>  --window-days 90<br/><br/># Narrow to specific sources<br/>scour ask "open source billing tools" --sources reddit,hn --window-days 14<br/><br/># --summarizer claude is accepted but has no effect; Ollama is always used<br/>scour ask "container orchestration trends" --summarizer claude<br/><br/># Discover what's trending without a topic<br/>scour discover --top-n 5 --window-days 7<br/><br/># Browse past runs<br/>scour list<br/>scour timeline <slug><br/>```<br/><br/>The interactive PowerShell launcher (`Scour-Sentiments.ps1`) wraps these commands with menus if you prefer not to type flags.<br/><br/>> [!TIP]<br/>> Always run `scour` from the repo root, or pass `--out` with an absolute path. The defaults (`data/`, `cache/`) resolve relative to your **current working directory**.<br/><br/>---<br/><br/><a id="cli-reference"></a><br/>## 📖 CLI Reference<br/><br/><a id="scour-ask"></a><br/>### `scour ask <TOPIC>`<br/><br/>Fetch + rank + summarise posts about `TOPIC`. Writes `data/runs/<slug>_<timestamp>/summary/summary.md`.<br/><br/>| Flag | Default | Description |<br/>|---|---|---|<br/>| `--window-days N` | `30` | How far back to look (days) |<br/>| `--sources LIST` | all | Comma-separated: `reddit,hn,indiehackers,trends` (aliases: `ih`, `google_trends`) |<br/>| `--subreddits LIST` | *(auto-discover)* | Comma-separated subreddit names; bypasses LLM-driven discovery |<br/>| `--model MODEL` | `qwen3-coder:30b` | Ollama model for summarization |<br/>| `--summarizer NAME` | `ollama` | Accepted and stored in `meta.json`; has no effect on pipeline execution |<br/>| `--out PATH` | `data` | Root folder for run output |<br/><br/><a id="scour-discover"></a><br/>### `scour discover`<br/><br/>Fetch trending titles from configured sources, pick the top-N, and run `ask` on each.<br/><br/>| Flag | Default | Description |<br/>|---|---|---|<br/>| `--window-days N` | `30` | Lookback window |<br/>| `--top-n N` | `5` | How many trending topics to dig into |<br/>| `--sources LIST` | all | Same aliases as `ask` |<br/>| `--model MODEL` | `qwen3-coder:30b` | Ollama model |<br/>| `--out PATH` | `data` | Output root |<br/><br/>> [!NOTE]<br/>> `scour discover` uses a simple pick-first driver, not the full `smolagents.CodeAgent` loop described in the design spec. Functional for most use cases.<br/><br/><a id="scour-timeline"></a><br/>### `scour timeline <SLUG>`<br/><br/>Print the chronological digest history for a topic slug (stored in `data/topics/<slug>/timeline.md`).<br/><br/><a id="scour-list"></a><br/>### `scour list`<br/><br/>List recent runs newest-first.<br/><br/>| Flag | Default | Description |<br/>|---|---|---|<br/>| `--data-root PATH` | `data` | Output root |<br/>| `--limit N` | `20` | Max rows to show |<br/><br/>---<br/><br/><a id="mcp-setup"></a><br/>## 🔌 MCP Setup<br/><br/>`social-scraper-mcp` exposes four tools to Claude Code (or any MCP host):<br/><br/>| Tool | Returns | Description |<br/>|---|---|---|<br/>| `ask` | `{run_dir, summary_path, one_line_status}` | Run the `ask` pipeline. Returns paths only — no content |<br/>| `discover` | `{run_dir, summary_path, one_line_status}` | Run the `discover` loop. Same shape |<br/>| `read_summary` | file content | Read `summary.md` from a `run_dir` |<br/>| `read_timeline` | file content | Read the timeline for a topic slug |<br/><br/>`ask` and `discover` return only paths. Call `read_summary` or `read_timeline` as the explicit opt-in to retrieve content.<br/><br/>### Add to Claude Code config<br/><br/>Add to `.claude/settings.json` (project) or the global settings file:<br/><br/>```json<br/>{<br/>  "mcpServers": {<br/>    "social-scraper": {<br/>      "command": "social-scraper-mcp"<br/>    }<br/>  }<br/>}<br/>```<br/><br/>> [!IMPORTANT]<br/>> The MCP server requires Ollama to be running. If Ollama is unreachable, `ask`/`discover` return `{"error": "ollama_unreachable", ...}`.<br/><br/>> [!WARNING]<br/>> **Known limitation:** `_impl_ask` in the MCP server does not expose a `subreddits` parameter. Until that is added, subreddit discovery always uses the LLM path. Use the `scour` CLI with `--subreddits` if you need to pin communities.<br/><br/>---<br/><br/><a id="configuration"></a><br/>## 🛠️ Configuration<br/><br/>No config file — all settings are CLI flags or environment variables:<br/><br/>| Env var | Default | Description |<br/>|---|---|---|<br/>| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |<br/>| `OLLAMA_TIMEOUT` | `1800` | Per-request timeout in seconds |<br/>| `REDDIT_USER_AGENT` | *(generic UA string)* | Override the Reddit user-agent |<br/><br/>---<br/><br/><a id="output-structure"></a><br/>## 📂 Output Structure<br/><br/>Each run writes to `data/runs/<slug>_<timestamp>/`:<br/><br/>```<br/>data/runs/<slug>_<timestamp>/<br/>├── meta.json          ← run parameters, per-source stats, warnings, topic-confidence<br/>├── raw/               ← raw fetched posts per source (.jsonl) + Google Trends blob (.json)<br/>├── ranked.jsonl       ← all posts with relevance scores and reasons (full audit trail)<br/>└── summary/<br/>    └── summary.md     ← the final digest<br/>```<br/><br/>Per-topic history: `data/topics/<slug>/timeline.md`<br/><br/>The LLM call cache lives at `cache/ollama_calls.sqlite` (30-day TTL, keyed by post ID + model name + role).<br/><br/>---<br/><br/><a id="sources"></a><br/>## 📡 Sources<br/><br/>| Source | Mechanism | Notes |<br/>|---|---|---|<br/>| Reddit | Public JSON API (no auth, no PRAW) | Rate-limited (2 s + jitter). Returns 403 if user-agent is flagged. |<br/>| Hacker News | Algolia search API | Free, no auth. Fetches stories and comments. |<br/>| IndieHackers | HTML scraper (BeautifulSoup) | Fixed to the `ideas-and-validation` category. Brittle to HTML changes. |<br/>| Google Trends | `trendspy` (primary) / `pytrends` (fallback) | Unofficial API; occasional 429s treated as best-effort. |<br/><br/>> [!NOTE]<br/>> Reddit requires **no API credentials** — the client uses the public `.json` endpoint. If Reddit starts returning 403s, try setting a descriptive `REDDIT_USER_AGENT` value.<br/><br/>---<br/><br/><a id="known-issues"></a><br/>## 🐛 Known Issues & Gaps<br/><br/><details><br/><summary>Expand known issues</summary><br/><br/>- **Relative path defaults** — `data/` and `cache/` resolve relative to CWD. Run from the repo root or use `--out` with an absolute path.<br/>- **`--summarizer claude` has no effect** — the flag is accepted and stored in `meta.json` but nothing in the pipeline branches on it. Ollama is always used for all pipeline steps.<br/>- **LLM-driven subreddit discovery** selects general communities for niche topics. Use `--subreddits` to pin communities when you know them.<br/>- **`scour discover` uses a simple pick-first driver**, not the full `smolagents.CodeAgent` loop described in the design spec. Functional for most use cases.<br/>- **MCP `ask` tool missing `subreddits` param** — pin subreddits via the CLI for now.<br/>- No `--version`, `--dry-run`, `--explain`, or `scour doctor` subcommand yet.<br/><br/></details><br/><br/>---<br/><br/><a id="development"></a><br/>## 🧪 Development<br/><br/>```bash<br/>pip install -e ".[dev]"<br/><br/># Fast unit tests (no network, no Ollama)<br/>pytest -m component<br/><br/># Full workflow tests with fakes<br/>pytest -m workflow<br/><br/># All non-e2e tests<br/>pytest<br/><br/># Live e2e (requires running Ollama + real APIs)<br/>pytest tests/e2e --e2e -v<br/>```<br/><br/>---<br/><br/><a id="license"></a><br/>## 📄 License<br/><br/>MIT. See source headers. Author: Kyle Green (Quadstronaut).<br/><br/>Wiki: [github.com/Quadstronaut/SocialScour/wiki](https://github.com/Quadstronaut/SocialScour/wiki)<br/>
+<div align="center">
+
+# 🔍 SocialScour
+
+**Multi-source social aggregator for rapid topic research.**  
+Given a topic, pull Reddit + Hacker News + IndieHackers + Google Trends into a single ranked Markdown digest — locally, privately, free.
+
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-local%20LLM-black?logo=ollama&logoColor=white&style=flat-square)](https://ollama.com)
+[![Reddit](https://img.shields.io/badge/Reddit-public%20JSON%20API-FF4500?logo=reddit&logoColor=white&style=flat-square)](https://www.reddit.com)
+[![Hacker News](https://img.shields.io/badge/Hacker%20News-Algolia%20API-FF6600?logo=ycombinator&logoColor=white&style=flat-square)](https://hn.algolia.com/api)
+[![Google Trends](https://img.shields.io/badge/Google%20Trends-trendspy%2Fpytrends-4285F4?logo=google&logoColor=white&style=flat-square)](https://pypi.org/project/trendspy/)
+
+[![Last Commit](https://img.shields.io/github/last-commit/Quadstronaut/SocialScour?style=flat-square)](https://github.com/Quadstronaut/SocialScour/commits/master)
+[![Repo Size](https://img.shields.io/github/repo-size/Quadstronaut/SocialScour?style=flat-square)](https://github.com/Quadstronaut/SocialScour)
+[![Top Language](https://img.shields.io/github/languages/top/Quadstronaut/SocialScour?style=flat-square)](https://github.com/Quadstronaut/SocialScour)
+
+---
+
+[![Overview](https://img.shields.io/badge/Overview-0077B5?style=for-the-badge)](#overview)
+[![Install](https://img.shields.io/badge/Install-28a745?style=for-the-badge)](#install)
+[![Quick Start](https://img.shields.io/badge/Quick%20Start-17a2b8?style=for-the-badge)](#quick-start)
+[![CLI Reference](https://img.shields.io/badge/CLI%20Reference-6f42c1?style=for-the-badge)](#cli-reference)
+[![MCP Setup](https://img.shields.io/badge/MCP%20Setup-fd7e14?style=for-the-badge)](#mcp-setup)
+[![Config](https://img.shields.io/badge/Config-dc3545?style=for-the-badge)](#configuration)
+[![Output](https://img.shields.io/badge/Output-20c997?style=for-the-badge)](#output-structure)
+[![Sources](https://img.shields.io/badge/Sources-6610f2?style=for-the-badge)](#sources)
+
+</div>
+
+---
+
+<a id="overview"></a>
+## 🗺️ Overview
+
+SocialScour answers the question: *"Is this a real problem people care about?"*  
+It fetches, ranks, and summarises posts across four social platforms using a local Ollama LLM — no cloud API keys, no data leaving the box. The output artifact is a plain `.md` file ready for decision-support.
+
+### At a Glance
+
+| Dimension | Detail |
+|---|---|
+| **Data sources** | Reddit, Hacker News, IndieHackers, Google Trends |
+| **LLM backend** | Ollama (always) — `qwen3-coder:30b` for reasoning, `bge-m3` for embeddings |
+| **Entry points** | `scour` CLI · `social-scraper-mcp` MCP server |
+| **Auth required** | None (public APIs and scrapers only) |
+| **Output** | Ranked Markdown digest + full audit trail (`ranked.jsonl`, `meta.json`) |
+| **Cache** | SQLite — 30-day TTL, keyed by post ID + model + role |
+| **Privacy** | All data on-box |
+
+### Entry Points
+
+| Entry point | Driver | Command |
+|---|---|---|
+| `scour` CLI | Ollama (local, free) | `scour ask "your topic"` |
+| `social-scraper-mcp` | Ollama (MCP tools) | See [MCP Setup](#mcp-setup) |
+
+---
+
+<a id="data-flow"></a>
+## 🔄 Data Flow
+
+```mermaid
+flowchart TD
+    topic["🏷️ Topic / No Topic"]
+
+    subgraph Fetch["Fetch Layer"]
+        R["Reddit<br/>(public .json API)"]
+        HN["Hacker News<br/>(Algolia API)"]
+        IH["IndieHackers<br/>(HTML scraper)"]
+        GT["Google Trends<br/>(trendspy / pytrends)"]
+    end
+
+    subgraph Rank["Rank Layer"]
+        EMB["bge-m3<br/>Embeddings"]
+        SCORE["Relevance Scorer<br/>(ranked.jsonl)"]
+    end
+
+    subgraph Summarise["Summarise Layer"]
+        LLM["qwen3-coder:30b<br/>(Ollama)"]
+        MD["summary.md"]
+    end
+
+    subgraph Drivers["Entry Points"]
+        CLI["scour CLI"]
+        MCP["social-scraper-mcp<br/>(Claude Code / MCP host)"]
+    end
+
+    topic --> CLI
+    topic --> MCP
+    CLI --> Fetch
+    MCP --> Fetch
+
+    R & HN & IH & GT --> SCORE
+    EMB --> SCORE
+    SCORE --> LLM
+    LLM --> MD
+```
+
+---
+
+<a id="requirements"></a>
+## ⚙️ Requirements
+
+- **Python** ≥ 3.11
+- **[Ollama](https://ollama.com)** running locally (`ollama serve`)
+- Models pulled:
+
+```bash
+ollama pull qwen3-coder:30b   # reasoning / summarization
+ollama pull bge-m3:latest     # embeddings (relevance ranking)
+```
+
+- `trendspy` or `pytrends` for Google Trends (installed automatically)
+
+---
+
+<a id="install"></a>
+## 📦 Install
+
+```bash
+git clone https://github.com/Quadstronaut/SocialScour.git
+cd SocialScour
+pip install -e .
+```
+
+Confirm the install:
+
+```bash
+scour --help
+```
+
+---
+
+<a id="quick-start"></a>
+## 🚀 Quick Start
+
+```bash
+# Research a topic across all four sources (30-day window)
+scour ask "local LLM coding assistants"
+
+# Pin specific subreddits when you know the community (bypasses LLM discovery)
+scour ask "Linux server hardening audit tools" \
+  --subreddits sysadmin,selfhosted,linuxadmin,devops,cybersecurity \
+  --window-days 90
+
+# Narrow to specific sources
+scour ask "open source billing tools" --sources reddit,hn --window-days 14
+
+# --summarizer claude is accepted but has no effect; Ollama is always used
+scour ask "container orchestration trends" --summarizer claude
+
+# Discover what's trending without a topic
+scour discover --top-n 5 --window-days 7
+
+# Browse past runs
+scour list
+scour timeline <slug>
+```
+
+The interactive PowerShell launcher (`Scour-Sentiments.ps1`) wraps these commands with menus if you prefer not to type flags.
+
+> [!TIP]
+> Always run `scour` from the repo root, or pass `--out` with an absolute path. The defaults (`data/`, `cache/`) resolve relative to your **current working directory**.
+
+---
+
+<a id="cli-reference"></a>
+## 📖 CLI Reference
+
+<a id="scour-ask"></a>
+### `scour ask <TOPIC>`
+
+Fetch + rank + summarise posts about `TOPIC`. Writes `data/runs/<slug>_<timestamp>/summary/summary.md`.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--window-days N` | `30` | How far back to look (days) |
+| `--sources LIST` | all | Comma-separated: `reddit,hn,indiehackers,trends` (aliases: `ih`, `google_trends`) |
+| `--subreddits LIST` | *(auto-discover)* | Comma-separated subreddit names; bypasses LLM-driven discovery |
+| `--model MODEL` | `qwen3-coder:30b` | Ollama model for summarization |
+| `--summarizer NAME` | `ollama` | Accepted and stored in `meta.json`; has no effect on pipeline execution |
+| `--out PATH` | `data` | Root folder for run output |
+
+<a id="scour-discover"></a>
+### `scour discover`
+
+Fetch trending titles from configured sources, pick the top-N, and run `ask` on each.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--window-days N` | `30` | Lookback window |
+| `--top-n N` | `5` | How many trending topics to dig into |
+| `--sources LIST` | all | Same aliases as `ask` |
+| `--model MODEL` | `qwen3-coder:30b` | Ollama model |
+| `--out PATH` | `data` | Output root |
+
+> [!NOTE]
+> `scour discover` uses a simple pick-first driver, not the full `smolagents.CodeAgent` loop described in the design spec. Functional for most use cases.
+
+<a id="scour-timeline"></a>
+### `scour timeline <SLUG>`
+
+Print the chronological digest history for a topic slug (stored in `data/topics/<slug>/timeline.md`).
+
+<a id="scour-list"></a>
+### `scour list`
+
+List recent runs newest-first.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--data-root PATH` | `data` | Output root |
+| `--limit N` | `20` | Max rows to show |
+
+---
+
+<a id="mcp-setup"></a>
+## 🔌 MCP Setup
+
+`social-scraper-mcp` exposes four tools to Claude Code (or any MCP host):
+
+| Tool | Returns | Description |
+|---|---|---|
+| `ask` | `{run_dir, summary_path, one_line_status}` | Run the `ask` pipeline. Returns paths only — no content |
+| `discover` | `{run_dir, summary_path, one_line_status}` | Run the `discover` loop. Same shape |
+| `read_summary` | file content | Read `summary.md` from a `run_dir` |
+| `read_timeline` | file content | Read the timeline for a topic slug |
+
+`ask` and `discover` return only paths. Call `read_summary` or `read_timeline` as the explicit opt-in to retrieve content.
+
+### Add to Claude Code config
+
+Add to `.claude/settings.json` (project) or the global settings file:
+
+```json
+{
+  "mcpServers": {
+    "social-scraper": {
+      "command": "social-scraper-mcp"
+    }
+  }
+}
+```
+
+> [!IMPORTANT]
+> The MCP server requires Ollama to be running. If Ollama is unreachable, `ask`/`discover` return `{"error": "ollama_unreachable", ...}`.
+
+> [!WARNING]
+> **Known limitation:** `_impl_ask` in the MCP server does not expose a `subreddits` parameter. Until that is added, subreddit discovery always uses the LLM path. Use the `scour` CLI with `--subreddits` if you need to pin communities.
+
+---
+
+<a id="configuration"></a>
+## 🛠️ Configuration
+
+No config file — all settings are CLI flags or environment variables:
+
+| Env var | Default | Description |
+|---|---|---|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_TIMEOUT` | `1800` | Per-request timeout in seconds |
+| `REDDIT_USER_AGENT` | *(generic UA string)* | Override the Reddit user-agent |
+
+---
+
+<a id="output-structure"></a>
+## 📂 Output Structure
+
+Each run writes to `data/runs/<slug>_<timestamp>/`:
+
+```
+data/runs/<slug>_<timestamp>/
+├── meta.json          ← run parameters, per-source stats, warnings, topic-confidence
+├── raw/               ← raw fetched posts per source (.jsonl) + Google Trends blob (.json)
+├── ranked.jsonl       ← all posts with relevance scores and reasons (full audit trail)
+└── summary/
+    └── summary.md     ← the final digest
+```
+
+Per-topic history: `data/topics/<slug>/timeline.md`
+
+The LLM call cache lives at `cache/ollama_calls.sqlite` (30-day TTL, keyed by post ID + model name + role).
+
+---
+
+<a id="sources"></a>
+## 📡 Sources
+
+| Source | Mechanism | Notes |
+|---|---|---|
+| Reddit | Public JSON API (no auth, no PRAW) | Rate-limited (2 s + jitter). Returns 403 if user-agent is flagged. |
+| Hacker News | Algolia search API | Free, no auth. Fetches stories and comments. |
+| IndieHackers | HTML scraper (BeautifulSoup) | Fixed to the `ideas-and-validation` category. Brittle to HTML changes. |
+| Google Trends | `trendspy` (primary) / `pytrends` (fallback) | Unofficial API; occasional 429s treated as best-effort. |
+
+> [!NOTE]
+> Reddit requires **no API credentials** — the client uses the public `.json` endpoint. If Reddit starts returning 403s, try setting a descriptive `REDDIT_USER_AGENT` value.
+
+---
+
+<a id="known-issues"></a>
+## 🐛 Known Issues & Gaps
+
+<details>
+<summary>Expand known issues</summary>
+
+- **Relative path defaults** — `data/` and `cache/` resolve relative to CWD. Run from the repo root or use `--out` with an absolute path.
+- **`--summarizer claude` has no effect** — the flag is accepted and stored in `meta.json` but nothing in the pipeline branches on it. Ollama is always used for all pipeline steps.
+- **LLM-driven subreddit discovery** selects general communities for niche topics. Use `--subreddits` to pin communities when you know them.
+- **`scour discover` uses a simple pick-first driver**, not the full `smolagents.CodeAgent` loop described in the design spec. Functional for most use cases.
+- **MCP `ask` tool missing `subreddits` param** — pin subreddits via the CLI for now.
+- No `--version`, `--dry-run`, `--explain`, or `scour doctor` subcommand yet.
+
+</details>
+
+---
+
+<a id="development"></a>
+## 🧪 Development
+
+```bash
+pip install -e ".[dev]"
+
+# Fast unit tests (no network, no Ollama)
+pytest -m component
+
+# Full workflow tests with fakes
+pytest -m workflow
+
+# All non-e2e tests
+pytest
+
+# Live e2e (requires running Ollama + real APIs)
+pytest tests/e2e --e2e -v
+```
+
+---
+
+<a id="license"></a>
+## 📄 License
+
+MIT. See source headers. Author: Kyle Green (Quadstronaut).
+
+Wiki: [github.com/Quadstronaut/SocialScour/wiki](https://github.com/Quadstronaut/SocialScour/wiki)
