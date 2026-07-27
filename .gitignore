@@ -16,3 +16,6 @@ Thumbs.db
 
 # Aider
 .aider*
+
+# council run telemetry (local only)
+.claude/council-ledger.jsonl
