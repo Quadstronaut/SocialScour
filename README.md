@@ -340,6 +340,6 @@ pytest tests/e2e --e2e -v
 <a id="license"></a>
 ## 📄 License
 
-MIT. See source headers. Author: Quadstronaut (Quadstronaut).
+MIT. See source headers. Author: Quadstronaut.
 
 Wiki: [github.com/Quadstronaut/SocialScour/wiki](https://github.com/Quadstronaut/SocialScour/wiki)
